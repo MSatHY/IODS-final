@@ -7,4 +7,4 @@ output: html_document
 
 # Readme:
 
-This [repository](https://github.com/MSatHY/IODS-final) is made for returning my final exercise on a open data science course. Here is a [link](https://msathy.github.io/IODS-final/) to my final excercise web page (my aim in the exercise is to study Finnish muncipalities). The repository and the web page are hosted at [GitHub](https://github.com/).
+This [repository](https://github.com/MSatHY/IODS-final) is made for returning my final exercise on a open data science course. Here is a [link](https://msathy.github.io/IODS-final/) to my final excercise web page (my aim in the exercise is to study Finnish muncipalities). The repository and the web page are hosted at [GitHub](https://github.com/). This readme should be saved as UTF-8 encoded.
