@@ -1,0 +1,52 @@
+---
+title: "Final excerise for Open Data Science -course"
+author: "Markus Selin"
+date: "the 7th of March, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(readxl)
+library(ggplot2)
+
+
+setwd("C:\\Users\\Markus\\Documents\\OpenDataScience\\Final\\kunnatnet")
+population <- read.table("population.txt", sep="\t", header=T)
+```
+
+# Initial data gathering and wrangling
+
+I desided immediately to focus on Finnish open data. I got interested to study the Finnish muncipalities and their population changes. Therefore, I spend a lot of time to read two Excel-files (["Kuntajaot ja asukasluvut 2000-2016.xls"](www.kunnat.net/fi/tietopankit/tilastot/vaestotietoja/Documents/Kuntajaot%20ja%20asukasluvut%202000-2016.xls) ja ["Kuntien pinta-alat ja asukastiheydet 2016"](www.kunnat.net/fi/tietopankit/tilastot/aluejaot/kuntien-pinta-alat-ja-asukastiheydet/Documents/Kuntien%20pinta-alat%20ja%20asukastiheydet%202016.xlsx), please check the reference "Lähde" below) from [kunnat.net](http://www.kunnat.net/fi/Sivut/default.aspx) into R-data. The gathered (and handled) population information contains `r dim(population)[1]` observations (the muncipalities) and `r dim(population)[2]` variables (the population during years 2000-2016, checked at the start of the year). The files also reported fusions of muncipalities occuring during the given time frame. Since I was not interested to see the direct effects of the fusions on population numbers, I desided calculate the population numbers of the current muncipalities as if they had existed since 2000. Two of the fusions were difficult to handle. Temmes was joined between 3 muncipalities; however, I desided to ingnore the parts joined to Liminka and Rantsila as the main part was joined into Tyrnävä. Population of Längelmäki was complitely ingnored in this analysis, although approx. 64 % of the population lived in the part that joined into Jämsä and 36 % in the part joined into Orivesi ([source](http://w3.verkkouutiset.fi/arkisto/politiikka/73820.html)). 
+
+Lähde: Kuntien tietotekniikkakartoitus 2013, Suomen Kuntaliitto ry. Lisenssillä Creative Commons Nimeä 4.0 Kansainvälinen (CC BY 4.0).
+
+Below you can also find an example plot that visualizes an interesting exception in data: a part of Sipoo was fused with Helsinki (Sipoo still remains as an individual muncipality). The summary of the data (see below) shows that more 3/4 of the Finnish muncipalities are smaller than the calculated average size of Finnish muncipality. The smallest muncipality (`r test <- population; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$X2016 == 99) %>% select(ncol(test))`) has not changed in size very much whereas the largerst muncipality (`r test <- population; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$X2016 == 628208) %>% select(ncol(test))`) has noticably grown. The histogram (see below) shows the distribution in graphical form. It is evident that there are only very few muncipalities with over 30,000 people in Findland.
+
+```{r}
+# Example plot
+start_row <- 251
+end_row <- start_row+9
+colnames(population) <- 2000:2016
+test4 <- population[start_row:end_row,] 
+test4[,(ncol(test4)+1)] <- rownames(test4)
+colnames(test4)[ncol(test4)] <- "Muncipality"
+test5 <- test4 %>% gather("Year", "Population", 1:(ncol(test4)-1) )
+ggplot(test5, aes(x = Year, y = Population, col = Muncipality)) + geom_point() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))   
+
+```
+
+```{r}
+summary(population)
+```
+
+```{r}
+test <- population
+colnames(test)[ncol(test)] <- "Vuosi"
+ggplot(test, aes(x = Vuosi)) + geom_histogram(binwidth = 10000) + ggtitle("Histogram of Finnish muncipalities by\npopulation size (bandwidth = 10,000 people)") + xlab("Population number of the muncipality") + ylab("Number of muncipalities in Finland") 
+```
+
+
+As most of the muncipalities seemed to have changed very little, I got intrested to study the ones that had changed more. 
