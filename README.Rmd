@@ -1,15 +1,10 @@
 ---
-title: "readme"
+title: "Readme-file"
 author: "Markus Selin"
-date: "7 maaliskuuta 2017"
+date: "27 tammikuuta 2017"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-
-```
-
 # Readme:
 
-This repository is made for returning my final exercise on a open data science course. Here is a [link](https://github.com/MSatHY/IODS-final.git) to my final excercise web page (my aim in the exercise is to study Finnish muncipalities). The repository and the web page are hosted at [GitHub](https://github.com/).
-
+This [repository](https://github.com/MSatHY/IODS-final) is made for returning my final exercise on a open data science course. Here is a [link](https://msathy.github.io/IODS-final/) to my final excercise web page (my aim in the exercise is to study Finnish muncipalities). The repository and the web page are hosted at [GitHub](https://github.com/).
