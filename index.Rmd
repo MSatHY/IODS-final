@@ -30,7 +30,7 @@ selected <- read.table("selected.txt", sep="\t", header=T)
 
 # Final assignment for course on open data science
 
-This web page is inteded for publishing the data handling and analysis related to final learning assignment on course introduction to open data science. The data wrangling filer related to the final assignment may be found [here](https://github.com/MSatHY/IODS-final/blob/master/data/wrangling.R). The web page is The repository and the web page are hosted at [GitHub](https://github.com/). During the course we also prepared [a learning diary](https://msathy.github.io/IODS-project/). 
+This web page is inteded for publishing the data handling and analysis related to final learning assignment on course introduction to open data science. The data wrangling file related to the final assignment may be found [here](https://github.com/MSatHY/IODS-final/blob/master/data/wrangling.R). The repository and the web page are hosted at [GitHub](https://github.com/). During the course we also prepared [a learning diary](https://msathy.github.io/IODS-project/). 
 
 # Abstract
 
