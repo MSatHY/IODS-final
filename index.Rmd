@@ -1,7 +1,6 @@
 ---
 title: "Final excerise for Open Data Science -course"
-author: "Markus Selin"
-email: "markus.selin@helsinki.fi"
+author: "Markus Selin, markus.selin@helsinki.fi"
 date: "The 8th of March, 2017"
 output:
   html_document:
