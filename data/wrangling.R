@@ -218,7 +218,7 @@ fusion_info <- fusion_info[1:(nrow(fusion_info)-4),]
 
 
 # --------------------------------------------------
-# Now, let us reformulate population information "popul_info" with the fusion information...
+# Third: Now, let us reformulate population information "popul_info" with the fusion information...
 # --------------------------------------------------
 
 # Convert NAs into zeros, and round numbers to zero digits
@@ -344,9 +344,9 @@ colnames(popul_info) <- 2000:2016
 
 # 31 plots of 10 muncipalities (plotting in for loop does not seem to work) + remaining 3 muncipalities in a plot
 # result: the partial fusion of Sipoo to Helsinki in 2009 can be seen from the resulting plots
-# Analysis idea: limit the number of muncipalities to 20 by selecting 10 muncipalities growing the most (%-vise)
-# and diminishing the most (again, in %). Try to find open background information on the selected muncipalities
-# and try to find explaining factors for the increases and decreases. Later: maybe include random 10 to 20 muncipalities
+# Analysis idea: limit the number of muncipalities to 40 by selecting 20 muncipalities growing the most (%-vise)
+# and 20 diminishing the most (again, in %). Try to find open background information on the selected muncipalities
+# and try to find explaining factors for the increases and decreases. Later: maybe include some muncipalities (a number of them)
 # randomly selected from the remaining muncipalities and check how well you can predict their population changes, or 
 # alternatively how well you can group them (growing/diminishing) based on the background variables. 
 write.table(popul_info, file="population.txt", append = F, quote = T, sep = "\t", row.names = T)
@@ -646,41 +646,152 @@ colnames(test4)[ncol(test4)] <- "Muncipality"
 test5 <- test4 %>% gather("Year", "Population", 1:(ncol(test4)-1) )
 ggplot(test5, aes(x = Year, y = Population, col = Muncipality)) + geom_point()
 
+rm(start_row, end_row, test4, test5)
 
 
 
-# Changes (%) in population (between from 2000 to 2016)
+
+
+
+
+
+
+# --------------------------------------------------
+# Fourth: Let us select some of the muncipalities and gather the data on those
+# -------------------------------------------------- 
+
+# Calculate changes (%) in population (between from 2000 to 2016) to select the muncipalities for further analysis.
 changes_popul <- select(popul_info, one_of("2000", "2016"))
+# Calculate the % change: 
 changes_popul <- mutate(changes_popul, change = 100*(changes_popul$`2016`-changes_popul$`2000`)/changes_popul$`2000`)
-changes_popul <- select(changes_popul, change)
-changes_popul[,2] <- rownames(popul_info)
-colnames(changes_popul)[2] <- "Muncipality"
-changes_popul <- arrange(changes_popul, change, Muncipality) # organize the data primarily based on change...
-# changes_popul <- mutate(changes_popul, has_grown = (change > 0) )
-selected_muncipal <- changes_popul[1:20,]
-selected_muncipal[21:40,] <- changes_popul[(nrow(changes_popul)-10):nrow(changes_popul),]
-popul_info[,(ncol(popul_info)+1)] <- rownames(popul_info)
-colnames(popul_info)[ncol(popul_info)] <- "Muncipality"
-selected_muncipal <- left_join(selected_muncipal, popul_info, by = "Muncipality")
-rownames(selected_muncipal) <- selected_muncipal$Muncipality
+changes_popul <- select(changes_popul, change, change-1)      # Keep only the result of the calculation and population in 2016
+changes_popul[,(ncol(changes_popul)+1)] <- rownames(popul_info)  # Kopy the names of muncipalities into new column
+colnames(changes_popul)[ncol(changes_popul)] <- "Muncipality"    # Name the new variable
+changes_popul <- arrange(changes_popul, change, Muncipality)  # Organize the data primarily based on change
+selected_muncipal <- changes_popul[1:20,]                     # Copy the information of the 20 most diminished...
+selected_muncipal[21:40,] <- changes_popul[(nrow(changes_popul)-20):nrow(changes_popul),] # and 20 most grown muncipalities.
+#popul_info[,(ncol(popul_info)+1)] <- rownames(popul_info)
+#colnames(popul_info)[ncol(popul_info)] <- "Muncipality"
+#selected_muncipal <- left_join(selected_muncipal, popul_info, by = "Muncipality")
+rownames(selected_muncipal) <- selected_muncipal$Muncipality  # Name the rows with the names of the muncipalities
 
-# Areal information:
+# store the change information
+write.table(changes_popul, file="changes.txt", append = F, quote = T, sep = "\t", row.names = T) 
+rm(changes_popul, popul_info)
+
+# Next, we are going to gather areal information from an Excel-file (available from the following web adress):
 # www.kunnat.net/fi/tietopankit/tilastot/aluejaot/kuntien-pinta-alat-ja-asukastiheydet/Documents/Kuntien%20pinta-alat%20ja%20asukastiheydet%202016.xlsx
+
 # setwd("C:\\Users\\Markus\\Documents\\OpenDataScience\\Final\\kunnatnet")
 area_info <- read_excel("Kopio Kuntien pinta-alat ja asukastiheydet 2016.xlsx", sheet = "Kuntien pinta-alat 2016")
-area_info <- area_info[9:nrow(area_info),1:(ncol(area_info)-2)]
+area_info <- area_info[9:nrow(area_info),1:(ncol(area_info)-2)] # remove firsts empty rows and excess columns
 columns <- c("area_code", "Muncipality", "area_name_sw", "land_km2", "sweet_h2o_km2", "salt_h2o_km2", "total_km2", "population_2015", "popul_dens_tot", "popul_dens_land")
-colnames(area_info) <- columns
-rm(columns)
-area_info <- filter(area_info, complete.cases(area_info[,1])==TRUE )
-keep <-c("Muncipality", "land_km2", "sweet_h2o_km2", "salt_h2o_km2")
-area_info <- select(area_info, one_of(keep)) 
-area_info$land_km2 <- area_info$land_km2 %>% as.numeric()
-area_info$sweet_h2o_km2 <- area_info$sweet_h2o_km2 %>% as.numeric()
-area_info$salt_h2o_km2 <- area_info$salt_h2o_km2 %>% as.numeric()
-selected_muncipal <- left_join(selected_muncipal, area_info, by = "Muncipality")
-selected_muncipal <- mutate(selected_muncipal, land_density_2016 = (selected_muncipal$`2016`/selected_muncipal$land_km2) )
+colnames(area_info) <- columns; rm(columns) # name the variables
+area_info <- filter(area_info, complete.cases(area_info[,1])==TRUE ) # Remove excess rows (after the data)
+keep <-c("Muncipality", "land_km2", "sweet_h2o_km2", "salt_h2o_km2") # select the variables to keep
+area_info <- select(area_info, one_of(keep)) # keep the variables selected (rest are "removed")
+area_info$land_km2 <- area_info$land_km2 %>% as.numeric()           # convert data to numeric form
+area_info$sweet_h2o_km2 <- area_info$sweet_h2o_km2 %>% as.numeric() # convert data to numeric form          
+area_info$salt_h2o_km2 <- area_info$salt_h2o_km2 %>% as.numeric()   # convert data to numeric form
+for(i in 1:nrow(area_info)) {
+  area_info[i,1] <- gsub(" ", "", area_info[i,1])  # remove extra spaces in the names variable
+}
+rownames(area_info) <- area_info$Muncipality # name the rows
+rm(i)
+
+# Gather the data for the selected muncipalities
+selected_muncipal <- left_join(selected_muncipal, area_info, by = "Muncipality") 
+
+# Store the areal information into file
+keep <-c("land_km2", "sweet_h2o_km2", "salt_h2o_km2") # select columns to keep
+area_info <- select(area_info, one_of(keep))# keep the selected columns
+write.table(area_info, file="areas.txt", append = F, quote = T, sep = "\t", row.names = T) # store the areal information
+rm(area_info, keep)
+
+# Mutate the data on selected muncipalities to get the population density at land areas:
+selected_muncipal <- mutate(selected_muncipal, land_pop_density_2016 = (selected_muncipal$`2016`/selected_muncipal$land_km2) )
 # it is clear from the result, that the population densities calculated using the land areas show
 # clear difference between diminishing (0.16 - 3.2 persons/km2) and growing (18 - 232 persons/km2) muncipalities
 # however, this is also partly result of the moving
 
+
+#---------------------------------------------------------------
+# Fifth: Sotkanet social data wrangling
+#---------------------------------------------------------------
+
+setwd("C:\\Users\\Markus\\Documents\\OpenDataScience\\IODS-final\\data")
+social_data <- read.csv("sotkanet.csv", sep = ";", header = F, encoding="UTF-8")
+colnames(social_data) <- c("Variable_name", "Variable_code", "Muncipality", "Muncipality code", "data_on_sex", "Year", "variable_value_relative", "variable_value_absolute")
+keep <- c("Variable_name", "Muncipality", "variable_value_relative")
+social_data <- select(social_data, one_of(keep)); rm(keep) # select the columns to keep
+str(social_data) # some factor-type variables are present (even if they could be just character-type)
+social_data[,2] <- rep(levels(social_data[,2]), each = 4) # convert the Muncipality information into chr-type
+
+
+row_selector <- 4*(1:(160/4))-4
+social_data2 = data.frame(row_selector)
+rownames(social_data2) <- social_data[row_selector+1,"Muncipality"] # selects every 4th row and picks the information
+for(i in 1:4){ # let us use row_selector to pick the values of 4 variables and place them on separate columns
+  social_data2[,i] <- social_data[row_selector+i,3]
+  colnames(social_data2)[i] <- social_data$Variable_name[i] %>% as.character()
+}
+
+social_data <- social_data2 # store in neatly named object
+rm(social_data2, i, row_selector) # remove helper objects
+write.table(social_data, file="social.txt", append = F, quote = T, sep = "\t", row.names = T) # store the social information
+
+# Gather the social data on the selected muncipalities
+social_data[,(ncol(social_data)+1)] <- rownames(social_data)
+colnames(social_data)[ncol(social_data)] <- "Muncipality"
+selected_muncipal <- left_join(selected_muncipal, social_data, by = "Muncipality")
+rm (social_data)
+
+
+
+
+# Load the file containing working situation related variables
+work_data <- read.csv("sotkanet_work.csv", sep = ";", header = F, encoding="UTF-8")
+colnames(work_data) <- c("Variable_name", "Variable_code", "Muncipality", "Muncipality code", "data_on_sex", "Year", "variable_value_relative", "variable_value_absolute")
+keep <- c("Variable_name", "Muncipality", "variable_value_relative")
+work_data <- select(work_data, one_of(keep)); rm(keep) # select the columns to keep
+str(work_data) # some factor-type variables are present (even if they could be just character-type)
+work_data[,2] <- rep(levels(work_data[,2]), each = 4) # convert the Muncipality information into chr-type
+
+row_selector <- 4*(1:(160/4))-4
+work_data2 = data.frame(row_selector)
+rownames(work_data2) <- work_data[row_selector+1,"Muncipality"] # selects every 4th row and picks the information
+for(i in 1:4){ # let us use row_selector to pick the values of 4 variables and place them on separate columns
+  work_data2[,i] <- work_data[row_selector+i,3]
+  colnames(work_data2)[i] <- work_data$Variable_name[i] %>% as.character()
+}
+
+work_data <- work_data2 # store in neatly named object
+rm(work_data2, i, row_selector) # remove helper objects
+str(work_data) # all variables are factorial, let as make them numerical)
+work_data$`Toimeentulotukea saaneet henkilöt vuoden aikana,  % asukkaista` <- work_data$`Toimeentulotukea saaneet henkilöt vuoden aikana,  % asukkaista` %>% as.numeric()           # convert data to numeric form
+work_data$`Huoltosuhde, demografinen` <- work_data$`Huoltosuhde, demografinen` %>% as.numeric() # convert data to numeric form          
+work_data$`Kunnan yleinen pienituloisuusaste` <- work_data$`Kunnan yleinen pienituloisuusaste` %>% as.numeric()   # convert data to numeric form
+work_data$`Kunnan osarahoittama työmarkkinatuki, 1000 euroa` <- work_data$`Kunnan osarahoittama työmarkkinatuki, 1000 euroa` %>% as.numeric()   # convert data to numeric form
+str(work_data) # now they are numerical
+write.table(work_data, file="work.txt", append = F, quote = T, sep = "\t", row.names = T) # store the work information
+
+# Gather the social data on the selected muncipalities
+work_data[,(ncol(work_data)+1)] <- rownames(work_data)
+colnames(work_data)[ncol(work_data)] <- "Muncipality"
+selected_muncipal <- left_join(selected_muncipal, work_data, by = "Muncipality")
+rm (work_data)
+
+
+# Finally reorganize and store the data-set:
+
+# organize selected muncipalities by Muncipality
+selected_muncipal <- arrange(selected_muncipal, Muncipality)
+# Keep only the municipalities with all the information available 
+selected_muncipal <- filter(selected_muncipal, complete.cases(selected_muncipal)==TRUE)
+# Names of the municipalities as rownames
+rownames(selected_muncipal) <- selected_muncipal$Muncipality
+# Remove excess variable
+selected_muncipal <- select(selected_muncipal, -Muncipality)
+# name the columns
+colnames(selected_muncipal) <- c("change","population","land_km2","lake_km2","sea_km2","density","education","tightness","violence","crime","income_support","dependency","low_income","labour_support")
+write.table(selected_muncipal, file="selected.txt", append = F, quote = T, sep = "\t", row.names = T) # store the data-set

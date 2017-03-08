@@ -1,8 +1,17 @@
 ---
 title: "Final excerise for Open Data Science -course"
 author: "Markus Selin"
-date: "the 7th of March, 2017"
-output: html_document
+email: "markus.selin@helsinki.fi"
+date: "The 8th of March, 2017"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 2
+    fig_caption: true
+    fig_width: 6
+    fig_height: 4
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -11,42 +20,123 @@ library(stringr)
 library(tidyr)
 library(readxl)
 library(ggplot2)
+library(GGally)
+library(corrplot)
 
-
-setwd("C:\\Users\\Markus\\Documents\\OpenDataScience\\Final\\kunnatnet")
+setwd("C:\\Users\\Markus\\Documents\\OpenDataScience\\IODS-final\\data")
 population <- read.table("population.txt", sep="\t", header=T)
+areas <- read.table("areas.txt", sep="\t", header=T)
+selected <- read.table("selected.txt", sep="\t", header=T)
 ```
+
+# Final assignment for course on open data science
+
+This web page is inteded for publishing the data handling and analysis related to final learning assignment on course introduction to open data science. The data wrangling filer related to the final assignment may be found [here](https://github.com/MSatHY/IODS-final/blob/master/data/wrangling.R). The web page is The repository and the web page are hosted at [GitHub](https://github.com/). During the course we also prepared [a learning diary](https://msathy.github.io/IODS-project/). 
+
+# Abstract
+
+The work here presents linear regression analysis results on data combined from kunnat.net and sotkanet.fi. Finninsh municipalities are changing size over time. Following the trends over long times is tricky, however, since several fusions of municipalties have taken place. The data here was handled to prevent the influence of the fusions on the results. High average time of higher education per capita in the municipality was found to be key to detect percentually fast growing municipalities. A pretty good linear regression model could be archived by combining the key variable with 3 other variables: population size, percentual amount of crowded households and dependancy ratio. In the last chapter, the model diagnostic plots are presented and results discussed as well as analytic goals for future are set.   
 
 # Initial data gathering and wrangling
 
-I desided immediately to focus on Finnish open data. I got interested to study the Finnish muncipalities and their population changes. Therefore, I spend a lot of time to read two Excel-files (["Kuntajaot ja asukasluvut 2000-2016.xls"](www.kunnat.net/fi/tietopankit/tilastot/vaestotietoja/Documents/Kuntajaot%20ja%20asukasluvut%202000-2016.xls) ja ["Kuntien pinta-alat ja asukastiheydet 2016"](www.kunnat.net/fi/tietopankit/tilastot/aluejaot/kuntien-pinta-alat-ja-asukastiheydet/Documents/Kuntien%20pinta-alat%20ja%20asukastiheydet%202016.xlsx), please check the reference "Lähde" below) from [kunnat.net](http://www.kunnat.net/fi/Sivut/default.aspx) into R-data. The gathered (and handled) population information contains `r dim(population)[1]` observations (the muncipalities) and `r dim(population)[2]` variables (the population during years 2000-2016, checked at the start of the year). The files also reported fusions of muncipalities occuring during the given time frame. Since I was not interested to see the direct effects of the fusions on population numbers, I desided calculate the population numbers of the current muncipalities as if they had existed since 2000. Two of the fusions were difficult to handle. Temmes was joined between 3 muncipalities; however, I desided to ingnore the parts joined to Liminka and Rantsila as the main part was joined into Tyrnävä. Population of Längelmäki was complitely ingnored in this analysis, although approx. 64 % of the population lived in the part that joined into Jämsä and 36 % in the part joined into Orivesi ([source](http://w3.verkkouutiset.fi/arkisto/politiikka/73820.html)). 
+I desided immediately to focus on Finnish open data. I got interested to study the Finnish muncipalities and their population changes. Therefore, I spend a lot of time to read two Excel-files (["Kuntajaot ja asukasluvut 2000-2016.xls"](www.kunnat.net/fi/tietopankit/tilastot/vaestotietoja/Documents/Kuntajaot%20ja%20asukasluvut%202000-2016.xls) ja ["Kuntien pinta-alat ja asukastiheydet 2016"](www.kunnat.net/fi/tietopankit/tilastot/aluejaot/kuntien-pinta-alat-ja-asukastiheydet/Documents/Kuntien%20pinta-alat%20ja%20asukastiheydet%202016.xlsx), please check the reference "Lähde" below) from [Kunnat.net](http://www.kunnat.net/fi/Sivut/default.aspx) into R-data. The gathered (and handled) population information contains `r dim(population)[1]` observations (the muncipalities) and `r dim(population)[2]` variables (the population during years 2000-2016, checked at the start of the year). The files also reported fusions of muncipalities occuring during the given time frame. Since I was not interested to see the direct effects of the fusions on population numbers, I desided calculate the population numbers of the current muncipalities as if they had existed since 2000. Two of the fusions were difficult to handle. Temmes was joined between 3 muncipalities; however, I desided to ingnore the parts joined to Liminka and Rantsila as the main part was joined into Tyrnävä. Population of Längelmäki was complitely ingnored in this analysis, although approx. 64 % of the population lived in the part that joined into Jämsä and 36 % in the part joined into Orivesi ([source](http://w3.verkkouutiset.fi/arkisto/politiikka/73820.html)). 
 
 Lähde: Kuntien tietotekniikkakartoitus 2013, Suomen Kuntaliitto ry. Lisenssillä Creative Commons Nimeä 4.0 Kansainvälinen (CC BY 4.0).
 
-Below you can also find an example plot that visualizes an interesting exception in data: a part of Sipoo was fused with Helsinki (Sipoo still remains as an individual muncipality). The summary of the data (see below) shows that more 3/4 of the Finnish muncipalities are smaller than the calculated average size of Finnish muncipality. The smallest muncipality (`r test <- population; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$X2016 == 99) %>% select(ncol(test))`) has not changed in size very much whereas the largerst muncipality (`r test <- population; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$X2016 == 628208) %>% select(ncol(test))`) has noticably grown. The histogram (see below) shows the distribution in graphical form. It is evident that there are only very few muncipalities with over 30,000 people in Findland.
+Below you can also find an example plot that visualizes an interesting exception in data: a part of Sipoo was fused with Helsinki (Sipoo still remains as an individual municipality). The summary of the data (see below) shows that more 3/4 of the Finnish muncipalities are smaller than the calculated average size of Finnish municipality. The smallest municipality (`r test <- population; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$X2016 == 99) %>% select(ncol(test))`) has not changed in size very much whereas the largerst municipality (`r test <- population; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$X2016 == 628208) %>% select(ncol(test))`) has noticably grown. The histogram (see below) shows the distribution in graphical form. It is evident that there are only very few muncipalities with over 30,000 people in Findland. As most of the muncipalities seemed to have changed very little, I got intrested to study the ones that had changed more. In the [data wrangling file](https://github.com/MSatHY/IODS-final/blob/master/data/wrangling.R) I also read the other Excel file and wrangle the information about the areas (dry land, sweet water, and salt water) in the muncipalities (summary of that data may be found below). Some muncipalities have huge bodies of water while medians of aquous areas are quite small. Over 3/4 of the muncipalities have less than 1000 km^2^ land area. The smallest municipality is `r test <- areas; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$land_km2 == 5.89) %>% select(ncol(test))` and the largest is `r test <- areas; test[,(ncol(test)+1)] <- rownames(test); filter(test, test$land_km2 == 15055.10) %>% select(ncol(test))`. More technical data on muncipalities may be found from [avoindata.fi](https://www.avoindata.fi/fi) web site (check [this](https://www.avoindata.fi/data/fi/dataset/kunnat) for example). However, I would like to search for more living oriented data to explain the changes in population sizes.
 
 ```{r}
 # Example plot
+test <- population
 start_row <- 251
 end_row <- start_row+9
-colnames(population) <- 2000:2016
-test4 <- population[start_row:end_row,] 
-test4[,(ncol(test4)+1)] <- rownames(test4)
-colnames(test4)[ncol(test4)] <- "Muncipality"
-test5 <- test4 %>% gather("Year", "Population", 1:(ncol(test4)-1) )
-ggplot(test5, aes(x = Year, y = Population, col = Muncipality)) + geom_point() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))   
+colnames(test) <- 2000:2016
+test2 <- test[start_row:end_row,] 
+test2[,(ncol(test2)+1)] <- rownames(test2)
+colnames(test2)[ncol(test2)] <- "Muncipality"
+test3 <- test2 %>% gather("Year", "Population", 1:(ncol(test2)-1) )
+ggplot(test3, aes(x = Year, y = Population, col = Muncipality)) + geom_point() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8)) + ggtitle("Example plot showing the change in\npopulation size from 2000 to 2016") + xlab("Number of people") + ylab("Population in the municipality") 
 
 ```
 
 ```{r}
-summary(population)
+test <- population
+colnames(test) <- 2000:2016
+summary(test)
 ```
 
 ```{r}
 test <- population
 colnames(test)[ncol(test)] <- "Vuosi"
-ggplot(test, aes(x = Vuosi)) + geom_histogram(binwidth = 10000) + ggtitle("Histogram of Finnish muncipalities by\npopulation size (bandwidth = 10,000 people)") + xlab("Population number of the muncipality") + ylab("Number of muncipalities in Finland") 
+ggplot(test, aes(x = Vuosi)) + geom_histogram(binwidth = 10000) + ggtitle("Histogram of Finnish muncipalities'\npopulation size in 2016") + xlab("Population in the municipality (bandwidth = 10,000 people)") + ylab("Number of muncipalities in Finland") 
 ```
 
+```{r}
+summary(areas)
+```
 
-As most of the muncipalities seemed to have changed very little, I got intrested to study the ones that had changed more. In the [data wrangling file](https://github.com/MSatHY/IODS-final/blob/master/data/wrangling.R) I also read the other Excel file and wrangle the information about the areas (dry land, sweet water, and salt water) in the muncipalities. 
+```{r}
+test <- areas
+ggplot(test, aes(x = land_km2)) + geom_histogram(binwidth = 250) + ggtitle("Histogram of Finnish muncipalities'\nland area in 2016") + xlab(expression(paste("Land area in the municipality (bandwidth = 25 km"^"2"*")"))) + ylab("Number of muncipalities in Finland") 
+```
+
+# Gathering data to model percentual population change from 2000 to 2016
+
+For the rest of the exercise I focused on the municipalities most grown (20) and most diminished (20). During the data wrangling step, I had accidentally written a code that caused it to miss the most grown munipality. Instead, 20 most grown municipalities omitting the most grown munipality were selected. The data gathering step included a manual web-site browsing and interface manipulation. The error should not influence the generalizability of the results very much. Omitting one municipality with missing information, information on the following places was collected: 
+
+```{r}
+rownames(selected)
+```
+
+The fusions of the muncipalities make it difficult to obtain relevant data from 2000 (the muncipalities do not exist in their current form). Therefore, I desided to find data from 2016 for modelling the percentual population change. From [Sotkanet.fi](https://www.sotkanet.fi/sotkanet/fi/index), I found information on social environment of people. The open data in sotkanet is (as I understood) provided by Finnish health agency [Terveyden ja Hyvinvoinnin laitos](https://www.thl.fi/fi/) with [Creative Commons Lisence](https://yhteistyotilat.fi/wiki08/display/THLKA/THL%3An+avoimen+datan+lisenssi+ja+vastuuvapauslauseke). I desided to calculate the percentual population change from 2000 to 2016 in each current Finnish municipality (calculated from the previous data which largely circumvents the effects of municipality fusions). Then I downloaded 2016 information on average education time per capita after the comprehensive schooling ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/180)), number of persons outside working force per 100 workers, percentual amount of tightly packed households ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/183)), amount of crimes against lives and health of individuals acknowledged by the police per 1000 people ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/3113)), and amount of crimes against property acknowledged by the police per 1000 people ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/3114)). The data provided by the user interface may be found using [this link](https://www.sotkanet.fi/sotkanet/fi/csv?indicator=szYKijcytPbyjzcEAA==&region=y65MTDZzNE62NtIzi09LyjHMskw1sTS1SE4zNTIzzDA0tTQBSlnEpxYmmSYVAQA=&year=sy4rAwA=&gender=t&abs=f&color=f&order=G). For some reason, the data on the number of persons outside working force per 100 workers was not included in the downloaded file. With a second try, I was able to [download a file](https://www.sotkanet.fi/sotkanet/fi/csv?indicator=szYKtjYJsTZJtnastM5wBAA=&region=y65MTDZzNE62NtIzi09LyjHMskw1sTS1SE4zNTIzzDA0tTQBSlnEpxYmmSYVAQA=&year=sy4rAwA=&gender=t&abs=f&color=f&order=G) with some variables from 2015 describing the working situation in the selected muncipalities. The variables are (all metadata in Finnish): percentage of income supported population ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/493)), dependency ratio ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/761)), percentage of population with low income in the muncipality ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/3099)), and the total sum of labor market support (in thousands of euros) shares paid by the municipality ([metadata](https://www.sotkanet.fi/sotkanet/fi/metadata/indicators/4223)).
+
+The summaries the variables and correlations in the data are presented below. As we expect from the selection process, the change variable shows bimodal distribution. The population size of the selected municipalities seems to reflect the population sizes in Finland in general, and the same seems to be true for areal and density information. The other variables could be claimed to reflect the bimodality of the selection prosess to some degree. The land area and population density are positively correlated, which should not be surprising. Low income, education and population growth are positively correlated with each other, while dependency ratio shows negative correlation with the fore mentioned variables.
+
+```{r}
+summary(selected)
+```
+
+```{r}
+p <- ggpairs(selected, upper=NULL, lower = list(combo = wrap("facethist", bins = 20))) 
+p + ggtitle("Histograms and pairwise scatter plots\nof the variables in the data")
+```
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, fig.height=15, fig.width=15)
+
+# calculate the correlation matrix and round it
+cor_matrix <- cor(selected)  %>% round(digits=2)
+
+# visualize the correlation matrix
+corrplot(cor_matrix, method="circle", type ="upper", cl.pos="b", tl.pos="d", tl.cex=0.6, title="Graphical representation of the correlations\nin the data (refer to correlation matrix for exact values)") 
+
+# print the correlation matrix
+cor_matrix
+```
+ 
+# Modelling
+
+Based on the previous results, I will try to model the population change. Below I present summaries of some linear regression models I tried. The first model uses the 3 variables correlated with change. The average time of higher education per capita is the only significant explanatory variable. The second model shows that removing variables dependency and low_income does not increase the residual standard errors dramatically. The second model explains 77 % of the variability in the percentual population change using only one variable (only approx. 5 % less than the more complicated model). The third model uses all the other variables in the data to model the change. The point of this model was to show me what variables to pick as explanatory variables for the fourth model. I am quite satisfied with the fourth model:all the explanatory variables show great significance and the intercept is significant too. The low p-value from F-test tells that removing variables from the model is likely to make the model worse. The model explains approx. 92 % of the variation in the modelled variable (percentual change in population size from 2000 to 2016). Increasing average education time and tightly packed households by one unit icreases the population growth by 2.6 and 3.1 units, respectively. Increasing dependency ratio by one unit and population by 10,000 units degreases population growth by 5.1 and 1.4 units, respectively. By first clance, the residuals could be nicely distributed. Let us proceed into model validation.
+```{r}
+my_model <- lm(change ~ low_income + dependency + education, data = selected)
+summary(my_model)
+
+my_model2 <- lm(change ~ education, data = selected)
+summary(my_model2)
+
+my_model3 <- lm(change ~ ., data = selected)
+summary(my_model3)
+
+my_model4 <- lm(change ~ education + tightness + dependency + population, data = selected)
+summary(my_model4)
+```
+
+# Model validation and personal interpretation
+
+Now, I will produce and analyze model dianostic plots (see below). The residuals (prediction errors) seem to follow normal distribution quite well. The errors seem to be tiny bit dependent on the fitted value inside the diminishing municipalities. It raises concern on the generalizability of the model. The obsevations with highest impact (leverage) on the model are Espoo an Luoto. However, their leverage values and Cook's distances are quite small. Personally, I think that the education as the explanatory variable is the key for understanding the results of this modelling. Young adults search for education and move around Finland to get it. Once they have moved, they will study and establish themselves in the city they chose. They are unlikely to move again, since establising oneself again would break the existing social bonds and require new ones to be build. The moving will also influence the dependency ratio in two ways: the young will find work in the new environment while they are no longer sustaining the dependent in their original home towns. The population will reduce the procentual population change in two ways: little by little the cities get more crowded (increases competition and reduces willingness to move), and the percentual change becomes less dependant on the newcomers as the municipalities grow large enough. Tightness was the most surprising explanatory variable, since increasing it actually increases the growth rate of the municipalities. Maybe this represents the fact that the young moving into cities tend to live in (crowded) student appartments for some initial years of their studies. Then, maybe the social bonds are more effectively formed in the cities where inhabitants (students) live in a tiny bit more crowded way. The current model could be supplemented with age related information to verify the assumptions given. However, that might have to wait for another time.
+
+```{r}
+# Plotting the graphical model validation images:
+par(mfrow = c(2,2))
+plot(my_model4, which = c(1,2,5))
+```
